@@ -6,11 +6,11 @@ function dTdt = Orbiting_Heat_Fluxes(t, T)
     Mass = 1.33;%kg
     heat_cap = 961; %J/Kg/K
     beta_angle = 0; %Let it be deployed at the closest point to the sun
-    altitude = 500; %km
+    altitude = 500E3; %km
     a = 0.52; %Solar absorptivity
     Af = 0.35; %Albedo factor
     g = 5.67 * 10^-8; %Stefan-Boltz Constant
-    Planet_radius = 6378; %Radius of the parent body
+    Planet_radius = 6378E3; %Radius of the parent body
     h = (Planet_radius+altitude)/Planet_radius; %Relative Height
     F = 0.5*(1-sqrt(1-(1/(h^2)))); %Veiw Factor
     S = 1361; %W/m^2
@@ -22,8 +22,10 @@ function dTdt = Orbiting_Heat_Fluxes(t, T)
     Eclipse_start = pi - acos(sqrt(h^2-1)/(h*cos(beta_angle)));
     Eclipse_end = pi + acos(sqrt(h^2-1)/(h*cos(beta_angle)));
     
-    Orbital_period = 90*60; %90 minute period
-    Chi = mod((2*pi*t)/Orbital_period, 2*pi); %mod((2*pi*t)/Orbital_period, 2*pi)
+    %Orbital_period = 90*60; %90 minute period
+    Orbital_period = 2*pi*sqrt((altitude + Planet_radius)^3/3.986004418E14);
+    Chi = mod(((2*pi*t)/Orbital_period), (2*pi)); %mod((2*pi*t)/Orbital_period, 2*pi)
+    %Chi = ((2*pi*t)/Orbital_period) - (2*pi).*floor(((2*pi*t)/Orbital_period)./(2*pi))
     
     if (Eclipse_start < Chi) && (Chi< Eclipse_end)
         Eclipse = 0; %0= in eclipse
