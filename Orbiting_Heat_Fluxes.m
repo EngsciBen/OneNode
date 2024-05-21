@@ -1,5 +1,5 @@
 %page for function
-function dTdt = Orbiting_Heat_Fluxes(t, T)
+function [dTdt, Qs, Qa, Qout] = Orbiting_Heat_Fluxes(t, T)
     %%% Function for the ode
     %%%%%%%% PARAMETERS
     Atot = 0.06; %m^2
@@ -24,27 +24,27 @@ function dTdt = Orbiting_Heat_Fluxes(t, T)
     
     %Orbital_period = 90*60; %90 minute period
     Orbital_period = 2*pi*sqrt((altitude + Planet_radius)^3/3.986004418E14);
-    Chi = mod(((2*pi*t)/Orbital_period), (2*pi)); %mod((2*pi*t)/Orbital_period, 2*pi)
+    Chi = mod(((2.*pi.*t)/Orbital_period), (2.*pi)); %mod((2*pi*t)/Orbital_period, 2*pi)
     %Chi = ((2*pi*t)/Orbital_period) - (2*pi).*floor(((2*pi*t)/Orbital_period)./(2*pi))
     
-    if (Eclipse_start < Chi) && (Chi< Eclipse_end)
+    if (Eclipse_start < Chi) & (Chi< Eclipse_end)
         Eclipse = 0; %0= in eclipse
     else
         Eclipse = 1; %1= not in an eclipse
     end
 
-    if (-1*Eclipse_start < Chi) && (Chi < Eclipse_start)
+    if (-1*Eclipse_start < Chi) & (Chi < Eclipse_start)
         Fe = 0;
     else
         Fe = 1;
     end
 
-    Qs = a * Atot * S * Eclipse; % SOLAR FLUX    
-    QIR = emissivity * Atot * S_earth * F; % EARTH IR
+    Qs = a .* Atot .* S .* Eclipse; % SOLAR FLUX    
+    QIR = emissivity .* Atot .* S_earth .* F; % EARTH IR
     Qgen = 0; % Internal Heat Generation
-    Orbital_Albedo_funct = (1+cos(Chi)/2)^2 * (1-(Chi/Eclipse_start)^2) * cos(beta_angle);
-    Qa = a * Atot * S * Af * Orbital_Albedo_funct * F * Fe; % EARTH ALBEDO
-    Qout = emissivity * Atot * g * F * (T^4); % Lost Heat
-
-    dTdt = (Qs + Qa + QIR + Qgen - Qout) / (Mass*heat_cap);
+    Orbital_Albedo_funct = (1+cos(Chi)/2).^2 .* (1-(Chi/Eclipse_start).^2) .* cos(beta_angle);
+    Qa = a .* Atot .* S .* Af .* Orbital_Albedo_funct .* F .* Fe; % EARTH ALBEDO
+    Qout = emissivity .* Atot .* g .* F .* (T.^4); % Lost Heat
+    
+    dTdt = (Qs + Qa + QIR + Qgen - Qout) / (Mass.*heat_cap);
     %dTdt = (Qs*Eclipse + Eclipse*a * Atot * S * Af * (1+cos((2*pi*t)/Orbital_period)/2)^2 * (1-(((2*pi*t)/Orbital_period)/Eclipse_start)^2) * cos(beta_angle) * F + QIR + Qgen - emissivity * A * g * F * (T^4 - 2.33^4)) / (Mass*heat_cap);
