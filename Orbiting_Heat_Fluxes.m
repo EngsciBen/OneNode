@@ -1,5 +1,5 @@
 %page for function
-function [dTdt, Qs, Qa, Qout] = Orbiting_Heat_Fluxes(t, T)
+function [dTdt, Qs, Qa, Qout, QIR] = Orbiting_Heat_Fluxes(t, T) % [dTdt, Qs, Qa, Qout]
     %%% Function for the ode
     %%%%%%%% PARAMETERS
     Atot = 0.06; %m^2
@@ -16,7 +16,7 @@ function [dTdt, Qs, Qa, Qout] = Orbiting_Heat_Fluxes(t, T)
     S = 1361; %W/m^2
     Earth_IR = 230; %W/m^2 Assumed constant; albeit inconstant in reality
     emissivity = 0.9;
-    S_earth = 200; %ranges from 110-300W
+    S_earth = 255; %ranges from 110-300W
 
     %Checking if in eclipse first:
     Eclipse_start = pi - acos(sqrt(h^2-1)/(h*cos(beta_angle)));
@@ -24,27 +24,49 @@ function [dTdt, Qs, Qa, Qout] = Orbiting_Heat_Fluxes(t, T)
     
     %Orbital_period = 90*60; %90 minute period
     Orbital_period = 2*pi*sqrt((altitude + Planet_radius)^3/3.986004418E14);
-    Chi = mod(((2.*pi.*t)/Orbital_period), (2.*pi)); %mod((2*pi*t)/Orbital_period, 2*pi)
-    %Chi = ((2*pi*t)/Orbital_period) - (2*pi).*floor(((2*pi*t)/Orbital_period)./(2*pi))
+    Phi = mod(((2.*pi.*t)/Orbital_period), (2.*pi)); %mod((2*pi*t)/Orbital_period, 2*pi)
+    Phi_a = wrapToPi(Phi);
+    %Phi = ((2*pi*t)/Orbital_period) - (2*pi).*floor(((2*pi*t)/Orbital_period)./(2*pi))
     
-    if (Eclipse_start < Chi) & (Chi< Eclipse_end)
+    if (Eclipse_start < Phi) && (Phi< Eclipse_end)
         Eclipse = 0; %0= in eclipse
     else
         Eclipse = 1; %1= not in an eclipse
     end
 
-    if (-1*Eclipse_start < Chi) & (Chi < Eclipse_start)
-        Fe = 0;
-    else
+    if (-1*Eclipse_start < Phi_a) && (Phi_a < Eclipse_start)
         Fe = 1;
+    else
+        Fe = 0;
     end
 
-    Qs = a .* Atot .* S .* Eclipse; % SOLAR FLUX    
-    QIR = emissivity .* Atot .* S_earth .* F; % EARTH IR
+    % 5.2E-01 * 0.06 * 1354 * Eclipse;
+    % 0.52 * 0.06 * 1361 * Eclipse;
+    Qs = a .* Atot/6 .* S .* Eclipse; % SOLAR FLUX    
+    QIR = emissivity .* Atot .* S_earth^4 .* F .* g; % EARTH IR emissivity .* Atot .* S_earth .* F
     Qgen = 0; % Internal Heat Generation
-    Orbital_Albedo_funct = (1+cos(Chi)/2).^2 .* (1-(Chi/Eclipse_start).^2) .* cos(beta_angle);
-    Qa = a .* Atot .* S .* Af .* Orbital_Albedo_funct .* F .* Fe; % EARTH ALBEDO
-    Qout = emissivity .* Atot .* g .* F .* (T.^4); % Lost Heat
+
+    %surfCube * emissivity * stefanBoltzman * Temp ^ 4;
+    Qout = emissivity .* Atot .* g .* (T.^4); % Lost Heat %% F .*
+
+    %fluxEarthIR = emissivity * surfCube * stefanBoltzman * viewFactor * earthTemp ^ 4;
+    %fluxRadOut = surfCube * emissivity * stefanBoltzman * Temp ^ 4;
+    if T < 273.15+8
+        Qgen = Qgen+0.37;
+    elseif T < 273.15 + 4
+        Qgen = Qgen+(0.37+0.555);
+    elseif T < 273.15 + 1
+        Qgen = Qgen + (0.37 + 0.555 + 0.74);
+    end
+
+    %phaseAng_a
+    Orbital_Albedo_funct = ((1 + cos(Phi_a)) / 2) ^ 2 * (1 - (Phi_a / Eclipse_start) ^ 2) * cos(beta_angle) * Fe;
+    Qa = a * Atot * S * Af * F * Orbital_Albedo_funct;
+    % 5.2E-01 * 0
+    
+    %Orbital_Albedo_funct = (1+cos(Phi)/2).^2 .* (1-(Phi/Eclipse_start).^2) .* cos(beta_angle) * Fe;
+    %Qa = a .* Atot .* S .* Af .* Orbital_Albedo_funct .* F .* Fe; % EARTH ALBEDO *F_earth_surface;
+
     
     dTdt = (Qs + Qa + QIR + Qgen - Qout) / (Mass.*heat_cap);
     %dTdt = (Qs*Eclipse + Eclipse*a * Atot * S * Af * (1+cos((2*pi*t)/Orbital_period)/2)^2 * (1-(((2*pi*t)/Orbital_period)/Eclipse_start)^2) * cos(beta_angle) * F + QIR + Qgen - emissivity * A * g * F * (T^4 - 2.33^4)) / (Mass*heat_cap);
